@@ -26,7 +26,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 rounded-lg px-2 py-1.5"
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!"
         >
           <div className="from-primary to-primary/70 flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br">
             <span className="bg-primary-foreground size-2 rounded-full" />
