@@ -35,14 +35,24 @@ export function FormsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const createForm = useCallback((input: FormInput) => {
-    const form: FormRecord = {
-      ...input,
-      id: String(nextId++),
-      responseCount: 0,
-      updatedAt: new Date().toISOString(),
-    };
-    setForms((prev) => [form, ...prev]);
-    return form;
+    let form: FormRecord;
+    setForms((prev) => {
+      let slug = input.slug;
+      let suffix = 2;
+      while (prev.some((existing) => existing.slug === slug)) {
+        slug = `${input.slug}-${suffix++}`;
+      }
+
+      form = {
+        ...input,
+        slug,
+        id: String(nextId++),
+        responseCount: 0,
+        updatedAt: new Date().toISOString(),
+      };
+      return [form, ...prev];
+    });
+    return form!;
   }, []);
 
   const updateForm = useCallback((id: string, input: FormInput) => {

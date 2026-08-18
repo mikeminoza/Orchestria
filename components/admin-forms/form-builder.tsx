@@ -82,6 +82,7 @@ export function FormBuilder(props: FormBuilderProps) {
   );
   const [published, setPublished] = useState(existing?.status === "published");
   const [shareOpen, setShareOpen] = useState(false);
+  const [newFieldId, setNewFieldId] = useState<string | null>(null);
 
   if (props.mode === "edit" && !existing) {
     return (
@@ -189,6 +190,11 @@ export function FormBuilder(props: FormBuilderProps) {
         onFontWeightChange={setFontWeight}
       />
 
+      <p className="text-muted-foreground text-center text-sm">
+        Click any text below to edit it. Use the icons next to a question to
+        change its type, reorder it, or delete it.
+      </p>
+
       <div className="flex justify-center">
         <div className="w-full max-w-2xl">
           <Card
@@ -225,6 +231,7 @@ export function FormBuilder(props: FormBuilderProps) {
                       field={field}
                       index={index}
                       fieldCount={fields.length}
+                      autoFocus={field.id === newFieldId}
                       onChange={(next) => updateField(field.id, next)}
                       onRemove={() => removeField(field.id)}
                       onMove={(direction) => moveField(field.id, direction)}
@@ -238,12 +245,11 @@ export function FormBuilder(props: FormBuilderProps) {
                 type="button"
                 variant="outline"
                 className="self-start"
-                onClick={() =>
-                  setFields((prev) => [
-                    ...prev,
-                    createField(crypto.randomUUID()),
-                  ])
-                }
+                onClick={() => {
+                  const field = createField(crypto.randomUUID());
+                  setFields((prev) => [...prev, field]);
+                  setNewFieldId(field.id);
+                }}
               >
                 <Plus data-icon="inline-start" />
                 Add question

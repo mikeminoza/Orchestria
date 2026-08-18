@@ -10,7 +10,7 @@ export function FormBannerDisplay({
   if (banner.type === "color") {
     return (
       <div
-        className="h-28 w-full sm:h-36"
+        className="h-36 w-full sm:h-44"
         style={{ backgroundColor: accentColor }}
       />
     );
@@ -19,7 +19,7 @@ export function FormBannerDisplay({
   if (banner.type === "image") {
     return (
       <div
-        className="bg-muted h-40 w-full sm:h-48"
+        className="bg-muted h-52 w-full sm:h-60"
         style={{
           backgroundImage: `url(${banner.url})`,
           backgroundSize: "cover",

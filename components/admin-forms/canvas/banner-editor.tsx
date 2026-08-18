@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { useRef, useState } from "react";
+import { ImagePlus, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -32,12 +31,60 @@ export function BannerEditor({
   onBannerChange: (banner: FormBanner) => void;
   onAccentColorChange: (color: string) => void;
 }) {
-  const [imageUrlDraft, setImageUrlDraft] = useState(
-    banner.type === "image" ? banner.url : "",
-  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const suppressCloseRef = useRef(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  function openFilePicker() {
+    // Opening the native file dialog steals window focus, which makes the
+    // popover's own dismissable layer think focus left it and close itself
+    // before the user ever sees the picker. Suppress that one close request,
+    // then clear the guard once the window regains focus (dialog dismissed,
+    // whether a file was chosen or the picker was cancelled). The focus event
+    // isn't guaranteed across every browser/OS combination, so a timeout
+    // backstops it - otherwise a missed event would wedge the popover open.
+    suppressCloseRef.current = true;
+    fileInputRef.current?.click();
+
+    let cleared = false;
+    const clearSuppress = () => {
+      if (cleared) return;
+      cleared = true;
+      suppressCloseRef.current = false;
+    };
+    window.addEventListener("focus", clearSuppress, { once: true });
+    window.setTimeout(clearSuppress, 1000);
+  }
+
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Image must be smaller than 5MB.");
+      return;
+    }
+
+    setUploadError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        onBannerChange({ type: "image", url: reader.result });
+      }
+    };
+    reader.readAsDataURL(file);
+  }
 
   return (
-    <Popover>
+    <Popover
+      open={popoverOpen}
+      onOpenChange={(next) => {
+        if (!next && suppressCloseRef.current) return;
+        setPopoverOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -45,9 +92,9 @@ export function BannerEditor({
           className={cn(
             "group/banner relative block w-full overflow-hidden text-left transition-colors",
             banner.type === "none" &&
-              "border-border/60 text-muted-foreground hover:border-border hover:bg-muted/40 flex h-14 items-center justify-center gap-1.5 border-2 border-dashed text-sm",
-            banner.type === "color" && "h-28",
-            banner.type === "image" && "bg-muted h-40",
+              "border-border/60 text-muted-foreground hover:border-border hover:bg-muted/40 flex h-16 items-center justify-center gap-1.5 border-2 border-dashed text-sm",
+            banner.type === "color" && "h-36",
+            banner.type === "image" && "bg-muted h-52",
           )}
           style={
             banner.type === "color"
@@ -67,12 +114,13 @@ export function BannerEditor({
               Add banner
             </>
           ) : (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover/banner:bg-black/30 group-hover/banner:opacity-100">
-              <span className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1.5 text-xs font-medium text-white">
+            <>
+              <span className="absolute inset-0 bg-black/0 transition-colors group-hover/banner:bg-black/20" />
+              <span className="bg-background/90 text-foreground absolute top-2 right-2 flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium shadow-sm">
                 <ImagePlus className="size-3.5" />
                 Edit banner
               </span>
-            </span>
+            </>
           )}
         </button>
       </PopoverTrigger>
@@ -88,13 +136,13 @@ export function BannerEditor({
                     type="button"
                     size="sm"
                     variant={banner.type === type ? "default" : "outline"}
-                    onClick={() =>
-                      onBannerChange(
-                        type === "image"
-                          ? { type: "image", url: imageUrlDraft }
-                          : { type },
-                      )
-                    }
+                    onClick={() => {
+                      if (type === "image") {
+                        openFilePicker();
+                      } else {
+                        onBannerChange({ type });
+                      }
+                    }}
                   >
                     {BANNER_TYPE_LABELS[type]}
                   </Button>
@@ -133,19 +181,35 @@ export function BannerEditor({
           ) : null}
 
           {banner.type === "image" ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="banner-image-url">Image URL</Label>
-              <Input
-                id="banner-image-url"
-                value={imageUrlDraft}
-                onChange={(event) => {
-                  setImageUrlDraft(event.target.value);
-                  onBannerChange({ type: "image", url: event.target.value });
-                }}
-                placeholder="https://..."
-              />
+            <div className="flex flex-col gap-2">
+              {banner.url ? (
+                <div
+                  className="bg-muted h-20 w-full rounded-md bg-cover bg-center"
+                  style={{ backgroundImage: `url(${banner.url})` }}
+                />
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={openFilePicker}
+              >
+                <Upload data-icon="inline-start" />
+                {banner.url ? "Replace image" : "Upload image"}
+              </Button>
+              {uploadError ? (
+                <p className="text-destructive text-xs">{uploadError}</p>
+              ) : null}
             </div>
           ) : null}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
         </div>
       </PopoverContent>
     </Popover>

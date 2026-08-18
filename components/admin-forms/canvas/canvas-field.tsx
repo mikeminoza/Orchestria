@@ -23,6 +23,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   InlineInput,
   InlineTextarea,
 } from "@/components/admin-forms/canvas/inline-text";
@@ -32,6 +37,26 @@ import type { FormField } from "@/lib/forms/types";
 function RequiredMark({ required }: { required?: boolean }) {
   if (!required) return null;
   return <span className="text-destructive">*</span>;
+}
+
+function ToolbarButton({
+  label,
+  ...props
+}: React.ComponentProps<typeof Button> & { label: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={label}
+          {...props}
+        />
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
 }
 
 function FieldControl({ field }: { field: FormField }) {
@@ -106,6 +131,7 @@ export function CanvasField({
   field,
   index,
   fieldCount,
+  autoFocus,
   onChange,
   onRemove,
   onMove,
@@ -113,6 +139,7 @@ export function CanvasField({
   field: FormField;
   index: number;
   fieldCount: number;
+  autoFocus?: boolean;
   onChange: (field: FormField) => void;
   onRemove: () => void;
   onMove: (direction: "up" | "down") => void;
@@ -120,52 +147,45 @@ export function CanvasField({
   const [hasDescription, setHasDescription] = useState(!!field.description);
 
   return (
-    <div className="group/field hover:bg-muted/30 relative rounded-lg p-2">
-      <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-focus-within/field:opacity-100 group-hover/field:opacity-100">
+    <div className="group/field border-border/60 hover:bg-muted/30 hover:border-border relative rounded-lg border border-dashed p-2">
+      <div className="bg-background/80 absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-md">
         <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Question settings"
-            >
-              <Settings2 />
-            </Button>
-          </PopoverTrigger>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Question settings"
+                >
+                  <Settings2 />
+                </Button>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent>Question type &amp; options</TooltipContent>
+          </Tooltip>
           <PopoverContent align="end">
             <FieldSettingsPopover field={field} onChange={onChange} />
           </PopoverContent>
         </Popover>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
+        <ToolbarButton
+          label="Move question up"
           disabled={index === 0}
           onClick={() => onMove("up")}
-          aria-label="Move question up"
         >
           <ChevronUp />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
+        </ToolbarButton>
+        <ToolbarButton
+          label="Move question down"
           disabled={index === fieldCount - 1}
           onClick={() => onMove("down")}
-          aria-label="Move question down"
         >
           <ChevronDown />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onRemove}
-          aria-label="Delete question"
-        >
+        </ToolbarButton>
+        <ToolbarButton label="Delete question" onClick={onRemove}>
           <Trash2 />
-        </Button>
+        </ToolbarButton>
       </div>
 
       <div className="flex flex-col gap-2 pr-32">
@@ -177,6 +197,7 @@ export function CanvasField({
             }
             placeholder="Question"
             className="text-sm font-medium"
+            autoFocus={autoFocus}
           />
           <RequiredMark required={field.required} />
         </div>
