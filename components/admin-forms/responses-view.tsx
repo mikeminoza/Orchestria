@@ -13,7 +13,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForms } from "@/components/admin-forms/forms-store";
+import { ResponsesSummary } from "@/components/admin-forms/responses-summary";
 import { ResponsesTable } from "@/components/admin-forms/responses-table";
 import { stripHtml } from "@/lib/forms/rich-text";
 import { getResponsesForForm } from "@/lib/forms/sample-responses";
@@ -89,11 +91,22 @@ export function ResponsesView({ formId }: { formId: string }) {
           </EmptyHeader>
         </Empty>
       ) : (
-        <ResponsesTable
-          form={form}
-          responses={responses}
-          onDeleteResponse={handleDeleteResponse}
-        />
+        <Tabs defaultValue="responses">
+          <TabsList>
+            <TabsTrigger value="responses">Responses</TabsTrigger>
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+          </TabsList>
+          <TabsContent value="responses">
+            <ResponsesTable
+              form={form}
+              responses={responses}
+              onDeleteResponse={handleDeleteResponse}
+            />
+          </TabsContent>
+          <TabsContent value="summary">
+            <ResponsesSummary form={form} responses={responses} />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
