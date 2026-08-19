@@ -42,10 +42,11 @@ export default async function PublicFormPage({
                 style={{
                   fontWeight: getFontWeightValue(form.theme.fontWeight),
                 }}
-              >
-                {form.title}
-              </CardTitle>
-              <CardDescription>{form.description}</CardDescription>
+                dangerouslySetInnerHTML={{ __html: form.title }}
+              />
+              <CardDescription
+                dangerouslySetInnerHTML={{ __html: form.description }}
+              />
             </CardHeader>
             <CardContent>
               <PublicForm form={form} />

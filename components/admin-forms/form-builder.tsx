@@ -3,7 +3,7 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, FileQuestion, Plus, QrCode } from "lucide-react";
+import { ChevronLeft, FileQuestion, Plus, QrCode, Rows3 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +15,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Field, FieldLabel, FieldSeparator } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -26,14 +31,13 @@ import {
 } from "@/components/ui/select";
 import { BannerEditor } from "@/components/admin-forms/canvas/banner-editor";
 import { CanvasField } from "@/components/admin-forms/canvas/canvas-field";
+import { CanvasSection } from "@/components/admin-forms/canvas/canvas-section";
 import { DesignToolbar } from "@/components/admin-forms/canvas/design-toolbar";
-import {
-  InlineInput,
-  InlineTextarea,
-} from "@/components/admin-forms/canvas/inline-text";
+import { RichText } from "@/components/admin-forms/canvas/rich-text-editable";
 import { DateTimePicker } from "@/components/admin-forms/date-time-picker";
 import { useForms } from "@/components/admin-forms/forms-store";
 import { ShareFormDialog } from "@/components/admin-forms/share-form-dialog";
+import { stripHtml } from "@/lib/forms/rich-text";
 import {
   ACCENT_PRESETS,
   getFontStack,
@@ -51,6 +55,14 @@ function createField(id: string): FormField {
   return {
     id,
     type: "short_text",
+    label: "",
+  };
+}
+
+function createSection(id: string): FormField {
+  return {
+    id,
+    type: "section",
     label: "",
   };
 }
@@ -91,6 +103,9 @@ export function FormBuilder(props: FormBuilderProps) {
   );
   const [status, setStatus] = useState<FormStatus>(existing?.status ?? "draft");
   const [expiresAt, setExpiresAt] = useState(existing?.expiresAt ?? "");
+  const [confirmationMessage, setConfirmationMessage] = useState(
+    existing?.confirmationMessage ?? "",
+  );
   const [shareOpen, setShareOpen] = useState(false);
   const [newFieldId, setNewFieldId] = useState<string | null>(null);
 
@@ -113,6 +128,15 @@ export function FormBuilder(props: FormBuilderProps) {
     );
   }
 
+  const totalSections = fields.filter(
+    (field) => field.type === "section",
+  ).length;
+  const sectionNumbers = fields.reduce<number[]>((acc, field, index) => {
+    const previous = index > 0 ? acc[index - 1] : 0;
+    acc.push(field.type === "section" ? previous + 1 : previous);
+    return acc;
+  }, []);
+
   function updateField(id: string, next: FormField) {
     setFields((prev) => prev.map((field) => (field.id === id ? next : field)));
   }
@@ -134,7 +158,7 @@ export function FormBuilder(props: FormBuilderProps) {
 
   function handleSave() {
     const payload = {
-      slug: existing?.slug ?? slugify(title),
+      slug: existing?.slug ?? slugify(stripHtml(title)),
       title,
       description,
       accentColor,
@@ -142,6 +166,7 @@ export function FormBuilder(props: FormBuilderProps) {
       expiresAt: expiresAt || undefined,
       fields,
       theme: { fontFamily, fontWeight, banner },
+      confirmationMessage: confirmationMessage || undefined,
     };
 
     if (props.mode === "edit") {
@@ -241,43 +266,58 @@ export function FormBuilder(props: FormBuilderProps) {
             />
             <CardContent className="flex flex-col gap-6 pb-(--card-spacing)">
               <div className="flex flex-col gap-1">
-                <InlineInput
+                <RichText
                   value={title}
-                  onChange={(event) => setTitle(event.target.value)}
+                  onChange={setTitle}
                   placeholder="Untitled form"
                   className="text-2xl"
                   style={{ fontWeight: getFontWeightValue(fontWeight) }}
                 />
-                <InlineTextarea
+                <RichText
                   value={description}
-                  onChange={(event) => setDescription(event.target.value)}
+                  onChange={setDescription}
                   placeholder="Form description"
                   className="text-muted-foreground"
+                  multiline
                 />
               </div>
 
               <div className="flex flex-col gap-6">
                 {fields.map((field, index) => (
                   <Fragment key={field.id}>
-                    <CanvasField
-                      field={field}
-                      index={index}
-                      fieldCount={fields.length}
-                      autoFocus={field.id === newFieldId}
-                      onChange={(next) => updateField(field.id, next)}
-                      onRemove={() => removeField(field.id)}
-                      onMove={(direction) => moveField(field.id, direction)}
-                    />
+                    {field.type === "section" ? (
+                      <CanvasSection
+                        field={field}
+                        index={index}
+                        fieldCount={fields.length}
+                        sectionNumber={sectionNumbers[index]}
+                        totalSections={totalSections}
+                        autoFocus={field.id === newFieldId}
+                        onChange={(next) => updateField(field.id, next)}
+                        onRemove={() => removeField(field.id)}
+                        onMove={(direction) => moveField(field.id, direction)}
+                      />
+                    ) : (
+                      <CanvasField
+                        field={field}
+                        index={index}
+                        fieldCount={fields.length}
+                        autoFocus={field.id === newFieldId}
+                        onChange={(next) => updateField(field.id, next)}
+                        onRemove={() => removeField(field.id)}
+                        onMove={(direction) => moveField(field.id, direction)}
+                      />
+                    )}
                     {index < fields.length - 1 ? <FieldSeparator /> : null}
                   </Fragment>
                 ))}
               </div>
 
-              <div className="flex">
+              <div className="flex gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full"
+                  className="flex-1"
                   onClick={() => {
                     const field = createField(crypto.randomUUID());
                     setFields((prev) => [...prev, field]);
@@ -287,7 +327,45 @@ export function FormBuilder(props: FormBuilderProps) {
                   <Plus data-icon="inline-start" />
                   Add question
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const section = createSection(crypto.randomUUID());
+                    setFields((prev) => [...prev, section]);
+                    setNewFieldId(section.id);
+                  }}
+                >
+                  <Rows3 data-icon="inline-start" />
+                  Add section
+                </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="flex justify-center">
+        <div className="w-full max-w-2xl">
+          <Card>
+            <CardContent className="pt-6">
+              <Field>
+                <FieldLabel htmlFor="confirmation-message">
+                  Confirmation message
+                </FieldLabel>
+                <FieldDescription>
+                  Shown to people after they submit this form.
+                </FieldDescription>
+                <RichText
+                  id="confirmation-message"
+                  value={confirmationMessage}
+                  onChange={setConfirmationMessage}
+                  placeholder="Thanks for filling out this form. Your response has been saved."
+                  className="border-input rounded-md border px-2 py-1.5"
+                  multiline
+                />
+              </Field>
             </CardContent>
           </Card>
         </div>

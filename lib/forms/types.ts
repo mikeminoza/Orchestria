@@ -18,7 +18,8 @@ export type FormField =
   | (BaseField & {
       type: "single_choice" | "multi_choice" | "dropdown";
       options: FieldOption[];
-    });
+    })
+  | (BaseField & { type: "section" });
 
 export type FieldType = FormField["type"];
 
@@ -50,6 +51,7 @@ export type FormRecord = {
   updatedAt: string;
   fields: FormField[];
   theme: FormTheme;
+  confirmationMessage?: string;
 };
 
 export type FormAnswer = string | string[];

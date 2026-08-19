@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/table";
 import { ResponseRowActions } from "@/components/admin-forms/response-row-actions";
 import { formatAnswer } from "@/lib/forms/format-answer";
+import { stripHtml } from "@/lib/forms/rich-text";
 import type {
   FieldOption,
   FormField,
@@ -155,7 +156,10 @@ function buildColumns(
   form: FormRecord,
   onDeleteResponse: (id: string) => void,
 ) {
-  const fieldColumns = form.fields.map((field, fieldIndex) => {
+  const answerableFields = form.fields.filter(
+    (field) => field.type !== "section",
+  );
+  const fieldColumns = answerableFields.map((field, fieldIndex) => {
     const isChoiceField =
       field.type === "single_choice" ||
       field.type === "multi_choice" ||
@@ -168,7 +172,7 @@ function buildColumns(
       (row) => formatAnswer(field, row.answers[field.id]),
       {
         id: field.id,
-        header: field.label,
+        header: stripHtml(field.label),
         filterFn: isExactFilter ? "equalsString" : "includesString",
         cell: isChoiceField
           ? (info) => (
@@ -226,12 +230,20 @@ function buildColumns(
 }
 
 function exportResponsesToCsv(form: FormRecord, rows: FormResponse[]) {
-  const headers = ["Submitted", ...form.fields.map((field) => field.label)];
+  const answerableFields = form.fields.filter(
+    (field) => field.type !== "section",
+  );
+  const headers = [
+    "Submitted",
+    ...answerableFields.map((field) => stripHtml(field.label)),
+  ];
   const lines = [
     headers,
     ...rows.map((row) => [
       new Date(row.submittedAt).toLocaleString(),
-      ...form.fields.map((field) => formatAnswer(field, row.answers[field.id])),
+      ...answerableFields.map((field) =>
+        formatAnswer(field, row.answers[field.id]),
+      ),
     ]),
   ];
   const csv = lines
@@ -314,11 +326,13 @@ export function ResponsesTable({
               }
             >
               <SelectTrigger className="w-52">
-                <SelectValue placeholder={field.label} />
+                <SelectValue placeholder={stripHtml(field.label)} />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="all">All {field.label}</SelectItem>
+                  <SelectItem value="all">
+                    All {stripHtml(field.label)}
+                  </SelectItem>
                   {field.options.map((option) => (
                     <SelectItem key={option.value} value={option.label}>
                       {option.label}

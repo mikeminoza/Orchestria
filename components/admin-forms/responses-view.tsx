@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/empty";
 import { useForms } from "@/components/admin-forms/forms-store";
 import { ResponsesTable } from "@/components/admin-forms/responses-table";
+import { stripHtml } from "@/lib/forms/rich-text";
 import { getResponsesForForm } from "@/lib/forms/sample-responses";
 
 export function ResponsesView({ formId }: { formId: string }) {
@@ -66,7 +67,9 @@ export function ResponsesView({ formId }: { formId: string }) {
       </div>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{form.title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {stripHtml(form.title)}
+        </h1>
         <p className="text-muted-foreground text-sm">
           {responses.length} response{responses.length === 1 ? "" : "s"}
         </p>

@@ -35,10 +35,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  InlineInput,
-  InlineTextarea,
-} from "@/components/admin-forms/canvas/inline-text";
+import { RichText } from "@/components/admin-forms/canvas/rich-text-editable";
 import { FieldSettingsPopover } from "@/components/admin-forms/canvas/field-settings-popover";
 import type { FormField } from "@/lib/forms/types";
 
@@ -205,11 +202,9 @@ export function CanvasField({
 
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-1 pr-32">
-          <InlineInput
+          <RichText
             value={field.label}
-            onChange={(event) =>
-              onChange({ ...field, label: event.target.value })
-            }
+            onChange={(html) => onChange({ ...field, label: html })}
             placeholder="Question"
             className="text-sm font-medium"
             autoFocus={autoFocus}
@@ -218,16 +213,15 @@ export function CanvasField({
         </div>
 
         {hasDescription ? (
-          <InlineTextarea
+          <RichText
             value={field.description ?? ""}
-            onChange={(event) =>
-              onChange({ ...field, description: event.target.value })
-            }
+            onChange={(html) => onChange({ ...field, description: html })}
             onBlur={() => {
               if (!field.description) setHasDescription(false);
             }}
             placeholder="Description"
             className="text-muted-foreground text-sm"
+            multiline
           />
         ) : (
           <button

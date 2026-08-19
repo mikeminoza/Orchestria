@@ -34,6 +34,7 @@ import {
 import { DeleteFormDialog } from "@/components/admin-forms/delete-form-dialog";
 import { ShareFormDialog } from "@/components/admin-forms/share-form-dialog";
 import { useForms } from "@/components/admin-forms/forms-store";
+import { stripHtml } from "@/lib/forms/rich-text";
 import { isFormExpired } from "@/lib/forms/status";
 import type { FormRecord } from "@/lib/forms/types";
 
@@ -68,12 +69,12 @@ export function FormCard({ form }: { form: FormRecord }) {
               href={`/dashboard/forms/${form.id}/responses`}
               className="hover:underline"
             >
-              {form.title}
+              {stripHtml(form.title)}
             </Link>
           </CardTitle>
         </div>
         <CardDescription className="line-clamp-2">
-          {form.description}
+          {stripHtml(form.description)}
         </CardDescription>
         <CardAction>
           <DropdownMenu>
@@ -170,7 +171,7 @@ export function FormCard({ form }: { form: FormRecord }) {
       </CardFooter>
       <DeleteFormDialog
         formId={form.id}
-        formTitle={form.title}
+        formTitle={stripHtml(form.title)}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
       />

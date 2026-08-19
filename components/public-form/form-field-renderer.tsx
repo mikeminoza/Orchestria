@@ -31,7 +31,7 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
       return (
         <Field>
           <FieldLabel htmlFor={field.id}>
-            {field.label}
+            <span dangerouslySetInnerHTML={{ __html: field.label }} />
             <RequiredMark required={field.required} />
           </FieldLabel>
           <Input
@@ -42,7 +42,9 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
             required={field.required}
           />
           {field.description ? (
-            <FieldDescription>{field.description}</FieldDescription>
+            <FieldDescription
+              dangerouslySetInnerHTML={{ __html: field.description }}
+            />
           ) : null}
         </Field>
       );
@@ -51,7 +53,7 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
       return (
         <Field>
           <FieldLabel htmlFor={field.id}>
-            {field.label}
+            <span dangerouslySetInnerHTML={{ __html: field.label }} />
             <RequiredMark required={field.required} />
           </FieldLabel>
           <Textarea
@@ -61,7 +63,9 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
             required={field.required}
           />
           {field.description ? (
-            <FieldDescription>{field.description}</FieldDescription>
+            <FieldDescription
+              dangerouslySetInnerHTML={{ __html: field.description }}
+            />
           ) : null}
         </Field>
       );
@@ -70,11 +74,13 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
       return (
         <FieldSet>
           <FieldLegend variant="label">
-            {field.label}
+            <span dangerouslySetInnerHTML={{ __html: field.label }} />
             <RequiredMark required={field.required} />
           </FieldLegend>
           {field.description ? (
-            <FieldDescription>{field.description}</FieldDescription>
+            <FieldDescription
+              dangerouslySetInnerHTML={{ __html: field.description }}
+            />
           ) : null}
           <RadioGroup name={field.id} required={field.required}>
             {field.options.map((option) => (
@@ -99,11 +105,13 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
       return (
         <FieldSet>
           <FieldLegend variant="label">
-            {field.label}
+            <span dangerouslySetInnerHTML={{ __html: field.label }} />
             <RequiredMark required={field.required} />
           </FieldLegend>
           {field.description ? (
-            <FieldDescription>{field.description}</FieldDescription>
+            <FieldDescription
+              dangerouslySetInnerHTML={{ __html: field.description }}
+            />
           ) : null}
           {field.options.map((option) => (
             <Field key={option.value} orientation="horizontal">
@@ -123,7 +131,7 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
       return (
         <Field>
           <FieldLabel htmlFor={field.id}>
-            {field.label}
+            <span dangerouslySetInnerHTML={{ __html: field.label }} />
             <RequiredMark required={field.required} />
           </FieldLabel>
           <Select name={field.id} required={field.required}>
@@ -141,7 +149,9 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
             </SelectContent>
           </Select>
           {field.description ? (
-            <FieldDescription>{field.description}</FieldDescription>
+            <FieldDescription
+              dangerouslySetInnerHTML={{ __html: field.description }}
+            />
           ) : null}
         </Field>
       );
@@ -150,7 +160,7 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
       return (
         <Field>
           <FieldLabel htmlFor={field.id}>
-            {field.label}
+            <span dangerouslySetInnerHTML={{ __html: field.label }} />
             <RequiredMark required={field.required} />
           </FieldLabel>
           <Input
@@ -160,7 +170,9 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
             required={field.required}
           />
           {field.description ? (
-            <FieldDescription>{field.description}</FieldDescription>
+            <FieldDescription
+              dangerouslySetInnerHTML={{ __html: field.description }}
+            />
           ) : null}
         </Field>
       );

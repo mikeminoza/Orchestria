@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatAnswer } from "@/lib/forms/format-answer";
+import { stripHtml } from "@/lib/forms/rich-text";
 import type { FormRecord, FormResponse } from "@/lib/forms/types";
 
 export function ResponseDetailDialog({
@@ -35,16 +36,18 @@ export function ResponseDetailDialog({
 
         {response ? (
           <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto">
-            {form.fields.map((field) => (
-              <div key={field.id} className="flex flex-col gap-1">
-                <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  {field.label}
-                </span>
-                <span className="text-sm text-balance">
-                  {formatAnswer(field, response.answers[field.id])}
-                </span>
-              </div>
-            ))}
+            {form.fields
+              .filter((field) => field.type !== "section")
+              .map((field) => (
+                <div key={field.id} className="flex flex-col gap-1">
+                  <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                    {stripHtml(field.label)}
+                  </span>
+                  <span className="text-sm text-balance">
+                    {formatAnswer(field, response.answers[field.id])}
+                  </span>
+                </div>
+              ))}
           </div>
         ) : null}
       </DialogContent>
