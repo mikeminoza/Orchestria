@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, FileQuestion, Inbox } from "lucide-react";
 
@@ -20,7 +20,17 @@ import { getResponsesForForm } from "@/lib/forms/sample-responses";
 export function ResponsesView({ formId }: { formId: string }) {
   const { getForm } = useForms();
   const form = getForm(formId);
-  const responses = useMemo(() => getResponsesForForm(formId), [formId]);
+  const [loadedFormId, setLoadedFormId] = useState(formId);
+  const [responses, setResponses] = useState(() => getResponsesForForm(formId));
+
+  if (loadedFormId !== formId) {
+    setLoadedFormId(formId);
+    setResponses(getResponsesForForm(formId));
+  }
+
+  const handleDeleteResponse = useCallback((id: string) => {
+    setResponses((prev) => prev.filter((response) => response.id !== id));
+  }, []);
 
   if (!form) {
     return (
@@ -76,7 +86,11 @@ export function ResponsesView({ formId }: { formId: string }) {
           </EmptyHeader>
         </Empty>
       ) : (
-        <ResponsesTable form={form} responses={responses} />
+        <ResponsesTable
+          form={form}
+          responses={responses}
+          onDeleteResponse={handleDeleteResponse}
+        />
       )}
     </div>
   );

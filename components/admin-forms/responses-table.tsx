@@ -20,8 +20,15 @@ import {
   type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, FileSpreadsheet, Search } from "lucide-react";
+import {
+  ArrowUpDown,
+  CircleCheck,
+  CircleX,
+  FileSpreadsheet,
+  Search,
+} from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,8 +47,91 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponseRowActions } from "@/components/admin-forms/response-row-actions";
 import { formatAnswer } from "@/lib/forms/format-answer";
-import type { FormField, FormRecord, FormResponse } from "@/lib/forms/types";
+import type {
+  FieldOption,
+  FormField,
+  FormRecord,
+  FormResponse,
+} from "@/lib/forms/types";
+
+const POSITIVE_WORDS = [
+  "excellent",
+  "great",
+  "yes",
+  "published",
+  "active",
+  "approved",
+  "done",
+];
+const NEGATIVE_WORDS = [
+  "poor",
+  "bad",
+  "no",
+  "failed",
+  "inactive",
+  "rejected",
+  "cancelled",
+];
+
+function getSentiment(label: string): "positive" | "negative" | "neutral" {
+  const normalized = label.toLowerCase();
+  if (POSITIVE_WORDS.some((word) => normalized.includes(word)))
+    return "positive";
+  if (NEGATIVE_WORDS.some((word) => normalized.includes(word)))
+    return "negative";
+  return "neutral";
+}
+
+function resolveOptionLabel(options: FieldOption[], value: string): string {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function ChoiceAnswerCell({
+  field,
+  answer,
+}: {
+  field: Extract<FormField, { options: FieldOption[] }>;
+  answer: string | string[] | undefined;
+}) {
+  if (!answer || (Array.isArray(answer) && answer.length === 0)) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const values = Array.isArray(answer) ? answer : [answer];
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      {values.map((value) => {
+        const label = resolveOptionLabel(field.options, value);
+        const sentiment = getSentiment(label);
+
+        if (sentiment === "positive") {
+          return (
+            <Badge key={value} variant="default">
+              <CircleCheck data-icon="inline-start" />
+              {label}
+            </Badge>
+          );
+        }
+        if (sentiment === "negative") {
+          return (
+            <Badge key={value} variant="destructive">
+              <CircleX data-icon="inline-start" />
+              {label}
+            </Badge>
+          );
+        }
+        return (
+          <Badge key={value} variant="outline">
+            {label}
+          </Badge>
+        );
+      })}
+    </div>
+  );
+}
 
 const tableFeatureSet = tableFeatures({
   columnFilteringFeature,
@@ -61,10 +151,18 @@ const tableFeatureSet = tableFeatures({
 
 const columnHelper = createColumnHelper<typeof tableFeatureSet, FormResponse>();
 
-function buildColumns(fields: FormField[]) {
-  const fieldColumns = fields.map((field) => {
+function buildColumns(
+  form: FormRecord,
+  onDeleteResponse: (id: string) => void,
+) {
+  const fieldColumns = form.fields.map((field, fieldIndex) => {
+    const isChoiceField =
+      field.type === "single_choice" ||
+      field.type === "multi_choice" ||
+      field.type === "dropdown";
     const isExactFilter =
       field.type === "single_choice" || field.type === "dropdown";
+    const isPrimaryField = fieldIndex === 0;
 
     return columnHelper.accessor(
       (row) => formatAnswer(field, row.answers[field.id]),
@@ -72,6 +170,20 @@ function buildColumns(fields: FormField[]) {
         id: field.id,
         header: field.label,
         filterFn: isExactFilter ? "equalsString" : "includesString",
+        cell: isChoiceField
+          ? (info) => (
+              <ChoiceAnswerCell
+                field={field}
+                answer={info.row.original.answers[field.id]}
+              />
+            )
+          : isPrimaryField
+            ? (info) => (
+                <span className="text-foreground font-medium">
+                  {info.getValue()}
+                </span>
+              )
+            : (info) => info.getValue(),
       },
     );
   });
@@ -93,7 +205,24 @@ function buildColumns(fields: FormField[]) {
     sortFn: "datetime",
   });
 
-  return columnHelper.columns([submittedColumn, ...fieldColumns]);
+  const actionsColumn = columnHelper.display({
+    id: "actions",
+    cell: ({ row }) => (
+      <div className="flex justify-end">
+        <ResponseRowActions
+          form={form}
+          response={row.original}
+          onDelete={onDeleteResponse}
+        />
+      </div>
+    ),
+  });
+
+  return columnHelper.columns([
+    submittedColumn,
+    ...fieldColumns,
+    actionsColumn,
+  ]);
 }
 
 function exportResponsesToCsv(form: FormRecord, rows: FormResponse[]) {
@@ -123,9 +252,11 @@ function exportResponsesToCsv(form: FormRecord, rows: FormResponse[]) {
 export function ResponsesTable({
   form,
   responses,
+  onDeleteResponse,
 }: {
   form: FormRecord;
   responses: FormResponse[];
+  onDeleteResponse: (id: string) => void;
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -133,7 +264,10 @@ export function ResponsesTable({
     { id: "submittedAt", desc: true },
   ]);
 
-  const columns = useMemo(() => buildColumns(form.fields), [form.fields]);
+  const columns = useMemo(
+    () => buildColumns(form, onDeleteResponse),
+    [form, onDeleteResponse],
+  );
 
   const table = useTable({
     features: tableFeatureSet,
@@ -214,11 +348,11 @@ export function ResponsesTable({
 
       <div className="overflow-hidden rounded-lg border">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-secondary">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="font-semibold">
                     {!header.isPlaceholder && (
                       <table.FlexRender header={header} />
                     )}
@@ -230,7 +364,10 @@ export function ResponsesTable({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="odd:bg-secondary/20 hover:bg-secondary/40"
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       <table.FlexRender cell={cell} />
