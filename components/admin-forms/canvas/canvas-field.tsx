@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Settings2, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Settings2,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -122,6 +130,13 @@ function FieldControl({ field }: { field: FormField }) {
           </SelectContent>
         </Select>
       );
+    case "file_upload":
+      return (
+        <div className="border-input pointer-events-none flex max-w-md flex-col items-center gap-1 rounded-lg border border-dashed p-6 text-center">
+          <Upload className="text-muted-foreground size-5" />
+          <span className="text-sm">Click to upload or drag and drop</span>
+        </div>
+      );
     default:
       return null;
   }
@@ -147,7 +162,7 @@ export function CanvasField({
   const [hasDescription, setHasDescription] = useState(!!field.description);
 
   return (
-    <div className="group/field border-border/60 hover:bg-muted/30 hover:border-border relative rounded-lg border border-dashed p-2">
+    <div className="group/field border-border hover:bg-muted/30 hover:border-foreground/40 relative rounded-lg border border-dashed p-4">
       <div className="bg-background/80 absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-md">
         <Popover>
           <Tooltip>
@@ -165,7 +180,7 @@ export function CanvasField({
             </TooltipTrigger>
             <TooltipContent>Question type &amp; options</TooltipContent>
           </Tooltip>
-          <PopoverContent align="end">
+          <PopoverContent align="end" className="p-4">
             <FieldSettingsPopover field={field} onChange={onChange} />
           </PopoverContent>
         </Popover>
@@ -188,8 +203,8 @@ export function CanvasField({
         </ToolbarButton>
       </div>
 
-      <div className="flex flex-col gap-2 pr-32">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1 pr-32">
           <InlineInput
             value={field.label}
             onChange={(event) =>
@@ -226,6 +241,19 @@ export function CanvasField({
 
         <div className="mt-1">
           <FieldControl field={field} />
+        </div>
+
+        <div className="mt-1 flex items-center justify-end gap-2">
+          <Label htmlFor={`required-${field.id}`} className="font-normal">
+            Required
+          </Label>
+          <Switch
+            id={`required-${field.id}`}
+            checked={!!field.required}
+            onCheckedChange={(checked) =>
+              onChange({ ...field, required: checked })
+            }
+          />
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@ type BaseField = {
 
 export type FormField =
   | (BaseField & {
-      type: "short_text" | "long_text" | "email";
+      type: "short_text" | "long_text" | "email" | "file_upload";
       placeholder?: string;
     })
   | (BaseField & {
@@ -22,7 +22,7 @@ export type FormField =
 
 export type FieldType = FormField["type"];
 
-export type FormStatus = "draft" | "published";
+export type FormStatus = "draft" | "published" | "closed";
 
 export type FormFontFamily =
   "sans" | "serif" | "mono" | "georgia" | "helvetica" | "times";
@@ -45,6 +45,7 @@ export type FormRecord = {
   description: string;
   accentColor: string;
   status: FormStatus;
+  expiresAt?: string;
   responseCount: number;
   updatedAt: string;
   fields: FormField[];

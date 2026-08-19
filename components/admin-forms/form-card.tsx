@@ -34,13 +34,25 @@ import {
 import { DeleteFormDialog } from "@/components/admin-forms/delete-form-dialog";
 import { ShareFormDialog } from "@/components/admin-forms/share-form-dialog";
 import { useForms } from "@/components/admin-forms/forms-store";
+import { isFormExpired } from "@/lib/forms/status";
 import type { FormRecord } from "@/lib/forms/types";
+
+function getStatusBadge(form: FormRecord): {
+  label: string;
+  variant: "default" | "secondary" | "outline";
+} {
+  if (form.status === "draft") return { label: "Draft", variant: "secondary" };
+  if (isFormExpired(form)) return { label: "Expired", variant: "outline" };
+  if (form.status === "closed") return { label: "Closed", variant: "outline" };
+  return { label: "Published", variant: "default" };
+}
 
 export function FormCard({ form }: { form: FormRecord }) {
   const { duplicateForm } = useForms();
   const [copied, setCopied] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const statusBadge = getStatusBadge(form);
 
   return (
     <Card>
@@ -136,9 +148,7 @@ export function FormCard({ form }: { form: FormRecord }) {
         </CardAction>
       </CardHeader>
       <CardContent className="flex items-center gap-2">
-        <Badge variant={form.status === "published" ? "default" : "secondary"}>
-          {form.status === "published" ? "Published" : "Draft"}
-        </Badge>
+        <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
         {form.responseCount > 0 ? (
           <Link
             href={`/dashboard/forms/${form.id}/responses`}

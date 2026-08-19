@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, FileQuestion, Plus, QrCode } from "lucide-react";
@@ -16,7 +16,14 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Field, FieldLabel, FieldSeparator } from "@/components/ui/field";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BannerEditor } from "@/components/admin-forms/canvas/banner-editor";
 import { CanvasField } from "@/components/admin-forms/canvas/canvas-field";
 import { DesignToolbar } from "@/components/admin-forms/canvas/design-toolbar";
@@ -24,6 +31,7 @@ import {
   InlineInput,
   InlineTextarea,
 } from "@/components/admin-forms/canvas/inline-text";
+import { DateTimePicker } from "@/components/admin-forms/date-time-picker";
 import { useForms } from "@/components/admin-forms/forms-store";
 import { ShareFormDialog } from "@/components/admin-forms/share-form-dialog";
 import {
@@ -36,6 +44,7 @@ import type {
   FormField,
   FormFontFamily,
   FormFontWeight,
+  FormStatus,
 } from "@/lib/forms/types";
 
 function createField(id: string): FormField {
@@ -80,7 +89,8 @@ export function FormBuilder(props: FormBuilderProps) {
   const [fields, setFields] = useState<FormField[]>(
     existing?.fields ?? [createField("field-1")],
   );
-  const [published, setPublished] = useState(existing?.status === "published");
+  const [status, setStatus] = useState<FormStatus>(existing?.status ?? "draft");
+  const [expiresAt, setExpiresAt] = useState(existing?.expiresAt ?? "");
   const [shareOpen, setShareOpen] = useState(false);
   const [newFieldId, setNewFieldId] = useState<string | null>(null);
 
@@ -128,7 +138,8 @@ export function FormBuilder(props: FormBuilderProps) {
       title,
       description,
       accentColor,
-      status: published ? ("published" as const) : ("draft" as const),
+      status,
+      expiresAt: expiresAt || undefined,
       fields,
       theme: { fontFamily, fontWeight, banner },
     };
@@ -152,14 +163,35 @@ export function FormBuilder(props: FormBuilderProps) {
         </Button>
         <div className="flex flex-wrap items-center gap-4">
           <Field orientation="horizontal" className="w-auto gap-2">
-            <Switch
-              id="form-published"
-              checked={published}
-              onCheckedChange={setPublished}
-            />
-            <FieldLabel htmlFor="form-published" className="font-normal">
-              Published
+            <FieldLabel htmlFor="form-status" className="font-normal">
+              Status
             </FieldLabel>
+            <Select
+              value={status}
+              onValueChange={(value) => setStatus(value as FormStatus)}
+            >
+              <SelectTrigger id="form-status" className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field orientation="horizontal" className="w-auto gap-2">
+            <FieldLabel htmlFor="form-expires" className="font-normal">
+              Closes on
+            </FieldLabel>
+            <DateTimePicker
+              id="form-expires"
+              value={expiresAt}
+              onChange={setExpiresAt}
+              placeholder="No expiration"
+            />
           </Field>
           {existing ? (
             <>
@@ -224,9 +256,9 @@ export function FormBuilder(props: FormBuilderProps) {
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-6">
                 {fields.map((field, index) => (
-                  <div key={field.id}>
+                  <Fragment key={field.id}>
                     <CanvasField
                       field={field}
                       index={index}
@@ -237,23 +269,25 @@ export function FormBuilder(props: FormBuilderProps) {
                       onMove={(direction) => moveField(field.id, direction)}
                     />
                     {index < fields.length - 1 ? <FieldSeparator /> : null}
-                  </div>
+                  </Fragment>
                 ))}
               </div>
 
-              <Button
-                type="button"
-                variant="outline"
-                className="self-start"
-                onClick={() => {
-                  const field = createField(crypto.randomUUID());
-                  setFields((prev) => [...prev, field]);
-                  setNewFieldId(field.id);
-                }}
-              >
-                <Plus data-icon="inline-start" />
-                Add question
-              </Button>
+              <div className="flex">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const field = createField(crypto.randomUUID());
+                    setFields((prev) => [...prev, field]);
+                    setNewFieldId(field.id);
+                  }}
+                >
+                  <Plus data-icon="inline-start" />
+                  Add question
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -1,6 +1,16 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import {
+  AlignLeft,
+  ChevronsUpDown,
+  CircleDot,
+  FileUp,
+  Mail,
+  Plus,
+  SquareCheck,
+  TextCursorInput,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,17 +23,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import type { FieldType, FormField } from "@/lib/forms/types";
 
-const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  short_text: "Short answer",
-  long_text: "Paragraph",
-  email: "Email",
-  single_choice: "Multiple choice",
-  multi_choice: "Checkboxes",
-  dropdown: "Dropdown",
-};
+const FIELD_TYPE_OPTIONS: {
+  value: FieldType;
+  label: string;
+  icon: typeof TextCursorInput;
+}[] = [
+  { value: "short_text", label: "Short answer", icon: TextCursorInput },
+  { value: "long_text", label: "Paragraph", icon: AlignLeft },
+  { value: "email", label: "Email", icon: Mail },
+  { value: "single_choice", label: "Multiple choice", icon: CircleDot },
+  { value: "multi_choice", label: "Checkboxes", icon: SquareCheck },
+  { value: "dropdown", label: "Dropdown", icon: ChevronsUpDown },
+  { value: "file_upload", label: "File upload", icon: FileUp },
+];
 
 const CHOICE_TYPES: FieldType[] = ["single_choice", "multi_choice", "dropdown"];
 
@@ -50,7 +64,10 @@ function changeFieldType(field: FormField, type: FieldType): FormField {
     };
   }
 
-  return { ...base, type: type as "short_text" | "long_text" | "email" };
+  return {
+    ...base,
+    type: type as "short_text" | "long_text" | "email" | "file_upload",
+  };
 }
 
 export function FieldSettingsPopover({
@@ -77,8 +94,9 @@ export function FieldSettingsPopover({
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              {Object.entries(FIELD_TYPE_LABELS).map(([value, label]) => (
+              {FIELD_TYPE_OPTIONS.map(({ value, label, icon: Icon }) => (
                 <SelectItem key={value} value={value}>
+                  <Icon />
                   {label}
                 </SelectItem>
               ))}
@@ -148,19 +166,6 @@ export function FieldSettingsPopover({
           </Button>
         </div>
       ) : null}
-
-      <div className="flex items-center justify-between border-t pt-3">
-        <Label htmlFor={`required-${field.id}`} className="font-normal">
-          Required
-        </Label>
-        <Switch
-          id={`required-${field.id}`}
-          checked={!!field.required}
-          onCheckedChange={(checked) =>
-            onChange({ ...field, required: checked })
-          }
-        />
-      </div>
     </div>
   );
 }

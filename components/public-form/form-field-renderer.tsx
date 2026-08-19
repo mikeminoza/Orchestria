@@ -146,6 +146,25 @@ export function FormFieldRenderer({ field }: { field: FormField }) {
         </Field>
       );
 
+    case "file_upload":
+      return (
+        <Field>
+          <FieldLabel htmlFor={field.id}>
+            {field.label}
+            <RequiredMark required={field.required} />
+          </FieldLabel>
+          <Input
+            id={field.id}
+            name={field.id}
+            type="file"
+            required={field.required}
+          />
+          {field.description ? (
+            <FieldDescription>{field.description}</FieldDescription>
+          ) : null}
+        </Field>
+      );
+
     default:
       return null;
   }

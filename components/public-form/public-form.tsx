@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,11 +14,30 @@ import {
 } from "@/components/ui/empty";
 import { FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { FormFieldRenderer } from "@/components/public-form/form-field-renderer";
+import { isFormExpired, isFormClosed } from "@/lib/forms/status";
 import type { FormRecord } from "@/lib/forms/types";
 
 export function PublicForm({ form }: { form: FormRecord }) {
   const [submitted, setSubmitted] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+
+  if (isFormClosed(form)) {
+    return (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Lock />
+          </EmptyMedia>
+          <EmptyTitle>No longer accepting responses</EmptyTitle>
+          <EmptyDescription>
+            {isFormExpired(form) && form.expiresAt
+              ? `This form closed on ${new Date(form.expiresAt).toLocaleString()}.`
+              : "This form is closed and no longer accepting responses."}
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
 
   if (submitted) {
     return (
