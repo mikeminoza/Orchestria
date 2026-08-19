@@ -156,6 +156,22 @@ export function FormBuilder(props: FormBuilderProps) {
     });
   }
 
+  function duplicateField(id: string) {
+    const duplicateId = crypto.randomUUID();
+    setFields((prev) => {
+      const index = prev.findIndex((field) => field.id === id);
+      if (index === -1) return prev;
+      const duplicate: FormField = {
+        ...structuredClone(prev[index]),
+        id: duplicateId,
+      };
+      const next = [...prev];
+      next.splice(index + 1, 0, duplicate);
+      return next;
+    });
+    setNewFieldId(duplicateId);
+  }
+
   function handleSave() {
     const payload = {
       slug: existing?.slug ?? slugify(stripHtml(title)),
@@ -306,6 +322,7 @@ export function FormBuilder(props: FormBuilderProps) {
                         onChange={(next) => updateField(field.id, next)}
                         onRemove={() => removeField(field.id)}
                         onMove={(direction) => moveField(field.id, direction)}
+                        onDuplicate={() => duplicateField(field.id)}
                       />
                     )}
                     {index < fields.length - 1 ? <FieldSeparator /> : null}

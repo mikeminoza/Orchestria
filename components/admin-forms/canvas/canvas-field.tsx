@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  Copy,
   Settings2,
   Trash2,
   Upload,
@@ -147,6 +148,7 @@ export function CanvasField({
   onChange,
   onRemove,
   onMove,
+  onDuplicate,
 }: {
   field: FormField;
   index: number;
@@ -155,6 +157,7 @@ export function CanvasField({
   onChange: (field: FormField) => void;
   onRemove: () => void;
   onMove: (direction: "up" | "down") => void;
+  onDuplicate: () => void;
 }) {
   const [hasDescription, setHasDescription] = useState(!!field.description);
 
@@ -181,6 +184,9 @@ export function CanvasField({
             <FieldSettingsPopover field={field} onChange={onChange} />
           </PopoverContent>
         </Popover>
+        <ToolbarButton label="Duplicate question" onClick={onDuplicate}>
+          <Copy />
+        </ToolbarButton>
         <ToolbarButton
           label="Move question up"
           disabled={index === 0}
@@ -201,7 +207,7 @@ export function CanvasField({
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1 pr-32">
+        <div className="flex items-center gap-1 pr-40">
           <RichText
             value={field.label}
             onChange={(html) => onChange({ ...field, label: html })}
