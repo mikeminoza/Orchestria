@@ -42,3 +42,8 @@ next-env.d.ts
 
 # husky
 .husky/_
+
+# run-my-app driver screenshots (verification artifacts, not source)
+.claude/skills/run-my-app/screenshots/
+.claude
+.claude-plugin
