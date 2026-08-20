@@ -3,6 +3,21 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { ChevronLeft, FileQuestion, Plus, QrCode, Rows3 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -108,6 +123,12 @@ export function FormBuilder(props: FormBuilderProps) {
   );
   const [shareOpen, setShareOpen] = useState(false);
   const [newFieldId, setNewFieldId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   if (props.mode === "edit" && !existing) {
     return (
@@ -153,6 +174,17 @@ export function FormBuilder(props: FormBuilderProps) {
       const next = [...prev];
       [next[index], next[swapWith]] = [next[swapWith], next[index]];
       return next;
+    });
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setFields((prev) => {
+      const oldIndex = prev.findIndex((field) => field.id === active.id);
+      const newIndex = prev.findIndex((field) => field.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
     });
   }
 
@@ -298,37 +330,53 @@ export function FormBuilder(props: FormBuilderProps) {
                 />
               </div>
 
-              <div className="flex flex-col gap-6">
-                {fields.map((field, index) => (
-                  <Fragment key={field.id}>
-                    {field.type === "section" ? (
-                      <CanvasSection
-                        field={field}
-                        index={index}
-                        fieldCount={fields.length}
-                        sectionNumber={sectionNumbers[index]}
-                        totalSections={totalSections}
-                        autoFocus={field.id === newFieldId}
-                        onChange={(next) => updateField(field.id, next)}
-                        onRemove={() => removeField(field.id)}
-                        onMove={(direction) => moveField(field.id, direction)}
-                      />
-                    ) : (
-                      <CanvasField
-                        field={field}
-                        index={index}
-                        fieldCount={fields.length}
-                        autoFocus={field.id === newFieldId}
-                        onChange={(next) => updateField(field.id, next)}
-                        onRemove={() => removeField(field.id)}
-                        onMove={(direction) => moveField(field.id, direction)}
-                        onDuplicate={() => duplicateField(field.id)}
-                      />
-                    )}
-                    {index < fields.length - 1 ? <FieldSeparator /> : null}
-                  </Fragment>
-                ))}
-              </div>
+              <DndContext
+                id="form-canvas-fields"
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={fields.map((field) => field.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="flex flex-col gap-6">
+                    {fields.map((field, index) => (
+                      <Fragment key={field.id}>
+                        {field.type === "section" ? (
+                          <CanvasSection
+                            field={field}
+                            index={index}
+                            fieldCount={fields.length}
+                            sectionNumber={sectionNumbers[index]}
+                            totalSections={totalSections}
+                            autoFocus={field.id === newFieldId}
+                            onChange={(next) => updateField(field.id, next)}
+                            onRemove={() => removeField(field.id)}
+                            onMove={(direction) =>
+                              moveField(field.id, direction)
+                            }
+                          />
+                        ) : (
+                          <CanvasField
+                            field={field}
+                            index={index}
+                            fieldCount={fields.length}
+                            autoFocus={field.id === newFieldId}
+                            onChange={(next) => updateField(field.id, next)}
+                            onRemove={() => removeField(field.id)}
+                            onMove={(direction) =>
+                              moveField(field.id, direction)
+                            }
+                            onDuplicate={() => duplicateField(field.id)}
+                          />
+                        )}
+                        {index < fields.length - 1 ? <FieldSeparator /> : null}
+                      </Fragment>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
               <div className="flex gap-2">
                 <Button

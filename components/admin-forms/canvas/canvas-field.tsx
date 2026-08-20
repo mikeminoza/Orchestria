@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronDown,
   ChevronUp,
   Copy,
+  GripVertical,
   Settings2,
   Trash2,
   Upload,
@@ -160,10 +163,30 @@ export function CanvasField({
   onDuplicate: () => void;
 }) {
   const [hasDescription, setHasDescription] = useState(!!field.description);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: field.id });
 
   return (
-    <div className="group/field border-border hover:bg-muted/30 hover:border-foreground/40 relative rounded-lg border border-dashed p-4">
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`group/field border-border hover:bg-muted/30 hover:border-foreground/40 relative rounded-lg border border-dashed p-4 ${isDragging ? "z-20 opacity-50" : ""}`}
+    >
       <div className="bg-background/80 absolute top-1 right-1 z-10 flex items-center gap-0.5 rounded-md">
+        <ToolbarButton
+          label="Drag to reorder"
+          className="cursor-grab active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical />
+        </ToolbarButton>
         <Popover>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -207,7 +230,7 @@ export function CanvasField({
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1 pr-40">
+        <div className="flex items-center gap-1 pr-48">
           <RichText
             value={field.label}
             onChange={(html) => onChange({ ...field, label: html })}
