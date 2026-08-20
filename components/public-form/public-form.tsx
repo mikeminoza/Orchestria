@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleCheck, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,11 +17,23 @@ import {
 import { FieldGroup, FieldSeparator } from "@/components/ui/field";
 import { Progress } from "@/components/ui/progress";
 import { FormFieldRenderer } from "@/components/public-form/form-field-renderer";
-import { stripHtml } from "@/lib/forms/rich-text";
+import { RICH_TEXT_LINK_CLASS, stripHtml } from "@/lib/forms/rich-text";
 import { isFormExpired, isFormClosed } from "@/lib/forms/status";
-import type { FormField, FormRecord } from "@/lib/forms/types";
+import { getTextStyle } from "@/lib/forms/theme";
+import {
+  buildDefaultValues,
+  buildResponseSchema,
+} from "@/lib/forms/validation-schema";
+import type { FormField, FormRecord, TextStyle } from "@/lib/forms/types";
+import { cn } from "@/lib/utils";
 
-type FormPage = { title?: string; description?: string; fields: FormField[] };
+type FormPage = {
+  title?: string;
+  titleStyle?: TextStyle;
+  description?: string;
+  descriptionStyle?: TextStyle;
+  fields: FormField[];
+};
 
 function buildPages(fields: FormField[]): FormPage[] {
   const pages: FormPage[] = [{ fields: [] }];
@@ -27,7 +41,9 @@ function buildPages(fields: FormField[]): FormPage[] {
     if (field.type === "section") {
       pages.push({
         title: field.label,
+        titleStyle: field.labelStyle,
         description: field.description,
+        descriptionStyle: field.descriptionStyle,
         fields: [],
       });
     } else {
@@ -41,13 +57,23 @@ function buildPages(fields: FormField[]): FormPage[] {
 
 export function PublicForm({ form }: { form: FormRecord }) {
   const [submitted, setSubmitted] = useState(false);
-  const [resetKey, setResetKey] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
-  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  const pages = buildPages(form.fields);
+  const pages = useMemo(() => buildPages(form.fields), [form.fields]);
+  const schema = useMemo(() => buildResponseSchema(form.fields), [form.fields]);
+  const defaultValues = useMemo(
+    () => buildDefaultValues(form.fields),
+    [form.fields],
+  );
+
+  const rhfForm = useForm({
+    resolver: zodResolver(schema),
+    defaultValues,
+  });
+
   const isMultiPage = pages.length > 1;
   const isLastPage = pageIndex === pages.length - 1;
+  const currentPage = pages[pageIndex];
 
   if (isFormClosed(form)) {
     return (
@@ -78,6 +104,8 @@ export function PublicForm({ form }: { form: FormRecord }) {
           <EmptyDescription>
             {form.confirmationMessage ? (
               <span
+                className={RICH_TEXT_LINK_CLASS}
+                style={getTextStyle(form.confirmationMessageStyle)}
                 dangerouslySetInnerHTML={{ __html: form.confirmationMessage }}
               />
             ) : (
@@ -94,7 +122,7 @@ export function PublicForm({ form }: { form: FormRecord }) {
             onClick={() => {
               setSubmitted(false);
               setPageIndex(0);
-              setResetKey((key) => key + 1);
+              rhfForm.reset(defaultValues);
             }}
           >
             Submit another response
@@ -104,15 +132,11 @@ export function PublicForm({ form }: { form: FormRecord }) {
     );
   }
 
-  function goToNextPage() {
-    const currentPage = pageRefs.current[pageIndex];
-    const controls =
-      currentPage?.querySelectorAll<
-        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-      >("input, select, textarea") ?? [];
-    for (const control of controls) {
-      if (!control.reportValidity()) return;
-    }
+  async function goToNextPage() {
+    const isValid = await rhfForm.trigger(
+      currentPage.fields.map((field) => field.id),
+    );
+    if (!isValid) return;
     setPageIndex((index) => Math.min(index + 1, pages.length - 1));
   }
 
@@ -122,12 +146,8 @@ export function PublicForm({ form }: { form: FormRecord }) {
 
   return (
     <form
-      key={resetKey}
       className="flex flex-col gap-6"
-      onSubmit={(event) => {
-        event.preventDefault();
-        setSubmitted(true);
-      }}
+      onSubmit={rhfForm.handleSubmit(() => setSubmitted(true))}
     >
       {isMultiPage ? (
         <div className="flex flex-col gap-1.5">
@@ -138,40 +158,37 @@ export function PublicForm({ form }: { form: FormRecord }) {
         </div>
       ) : null}
 
-      {pages.map((page, index) => (
-        <div
-          key={index}
-          ref={(element) => {
-            pageRefs.current[index] = element;
-          }}
-          className={index === pageIndex ? "flex flex-col gap-6" : "hidden"}
-        >
-          {page.title ? (
-            <div className="flex flex-col gap-1">
-              <h2
-                className="text-lg font-semibold"
-                dangerouslySetInnerHTML={{ __html: page.title }}
+      <div className="flex flex-col gap-6">
+        {currentPage.title ? (
+          <div className="flex flex-col gap-1">
+            <h2
+              className={cn("text-lg font-semibold", RICH_TEXT_LINK_CLASS)}
+              style={getTextStyle(currentPage.titleStyle)}
+              dangerouslySetInnerHTML={{ __html: currentPage.title }}
+            />
+            {currentPage.description ? (
+              <p
+                className={cn(
+                  "text-muted-foreground text-sm",
+                  RICH_TEXT_LINK_CLASS,
+                )}
+                style={getTextStyle(currentPage.descriptionStyle)}
+                dangerouslySetInnerHTML={{ __html: currentPage.description }}
               />
-              {page.description ? (
-                <p
-                  className="text-muted-foreground text-sm"
-                  dangerouslySetInnerHTML={{ __html: page.description }}
-                />
+            ) : null}
+          </div>
+        ) : null}
+        <FieldGroup>
+          {currentPage.fields.map((field, fieldIndex) => (
+            <div key={field.id} className="flex flex-col gap-6">
+              <FormFieldRenderer field={field} control={rhfForm.control} />
+              {fieldIndex < currentPage.fields.length - 1 ? (
+                <FieldSeparator />
               ) : null}
             </div>
-          ) : null}
-          <FieldGroup>
-            {page.fields.map((field, fieldIndex) => (
-              <div key={field.id} className="flex flex-col gap-6">
-                <FormFieldRenderer field={field} />
-                {fieldIndex < page.fields.length - 1 ? (
-                  <FieldSeparator />
-                ) : null}
-              </div>
-            ))}
-          </FieldGroup>
-        </div>
-      ))}
+          ))}
+        </FieldGroup>
+      </div>
 
       {isMultiPage ? (
         <div className="flex items-center justify-between">

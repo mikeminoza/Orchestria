@@ -1,4 +1,6 @@
-import type { FormFontFamily, FormFontWeight } from "@/lib/forms/types";
+import type { CSSProperties } from "react";
+
+import type { FormFontFamily, TextStyle } from "@/lib/forms/types";
 
 export const ACCENT_PRESETS = [
   "#6366f1",
@@ -34,17 +36,6 @@ export const FONT_FAMILY_OPTIONS: {
   },
 ];
 
-export const FONT_WEIGHT_OPTIONS: {
-  value: FormFontWeight;
-  label: string;
-  css: number;
-}[] = [
-  { value: "normal", label: "Normal", css: 400 },
-  { value: "medium", label: "Medium", css: 500 },
-  { value: "semibold", label: "Semibold", css: 600 },
-  { value: "bold", label: "Bold", css: 700 },
-];
-
 export function getFontStack(family: FormFontFamily): string {
   return (
     FONT_FAMILY_OPTIONS.find((option) => option.value === family)?.stack ??
@@ -52,8 +43,13 @@ export function getFontStack(family: FormFontFamily): string {
   );
 }
 
-export function getFontWeightValue(weight: FormFontWeight): number {
-  return (
-    FONT_WEIGHT_OPTIONS.find((option) => option.value === weight)?.css ?? 400
-  );
+export const DEFAULT_TEXT_STYLE: TextStyle = {
+  fontFamily: "sans",
+};
+
+export function getTextStyle(style: TextStyle | undefined): CSSProperties {
+  const resolved = style ?? DEFAULT_TEXT_STYLE;
+  return {
+    fontFamily: getFontStack(resolved.fontFamily),
+  };
 }

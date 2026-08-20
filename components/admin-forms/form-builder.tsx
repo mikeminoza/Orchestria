@@ -47,24 +47,37 @@ import {
 import { BannerEditor } from "@/components/admin-forms/canvas/banner-editor";
 import { CanvasField } from "@/components/admin-forms/canvas/canvas-field";
 import { CanvasSection } from "@/components/admin-forms/canvas/canvas-section";
-import { DesignToolbar } from "@/components/admin-forms/canvas/design-toolbar";
-import { RichText } from "@/components/admin-forms/canvas/rich-text-editable";
+import {
+  RichText,
+  type FontControls,
+} from "@/components/admin-forms/canvas/rich-text-editable";
 import { DateTimePicker } from "@/components/admin-forms/date-time-picker";
 import { useForms } from "@/components/admin-forms/forms-store";
 import { ShareFormDialog } from "@/components/admin-forms/share-form-dialog";
 import { stripHtml } from "@/lib/forms/rich-text";
 import {
   ACCENT_PRESETS,
+  DEFAULT_TEXT_STYLE,
   getFontStack,
-  getFontWeightValue,
+  getTextStyle,
 } from "@/lib/forms/theme";
 import type {
   FormBanner,
   FormField,
-  FormFontFamily,
-  FormFontWeight,
   FormStatus,
+  TextStyle,
 } from "@/lib/forms/types";
+
+function fontControlsFor(
+  style: TextStyle,
+  setStyle: (updater: (prev: TextStyle) => TextStyle) => void,
+): FontControls {
+  return {
+    fontFamily: style.fontFamily,
+    onFontFamilyChange: (fontFamily) =>
+      setStyle((prev) => ({ ...prev, fontFamily })),
+  };
+}
 
 function createField(id: string): FormField {
   return {
@@ -107,11 +120,13 @@ export function FormBuilder(props: FormBuilderProps) {
   const [banner, setBanner] = useState<FormBanner>(
     existing?.theme.banner ?? { type: "none" },
   );
-  const [fontFamily, setFontFamily] = useState<FormFontFamily>(
-    existing?.theme.fontFamily ?? "sans",
+  const fontFamily = existing?.theme.fontFamily ?? "sans";
+  const fontWeight = existing?.theme.fontWeight ?? "semibold";
+  const [titleStyle, setTitleStyle] = useState<TextStyle>(
+    existing?.titleStyle ?? DEFAULT_TEXT_STYLE,
   );
-  const [fontWeight, setFontWeight] = useState<FormFontWeight>(
-    existing?.theme.fontWeight ?? "semibold",
+  const [descriptionStyle, setDescriptionStyle] = useState<TextStyle>(
+    existing?.descriptionStyle ?? DEFAULT_TEXT_STYLE,
   );
   const [fields, setFields] = useState<FormField[]>(
     existing?.fields ?? [createField("field-1")],
@@ -121,6 +136,10 @@ export function FormBuilder(props: FormBuilderProps) {
   const [confirmationMessage, setConfirmationMessage] = useState(
     existing?.confirmationMessage ?? "",
   );
+  const [confirmationMessageStyle, setConfirmationMessageStyle] =
+    useState<TextStyle>(
+      existing?.confirmationMessageStyle ?? DEFAULT_TEXT_STYLE,
+    );
   const [shareOpen, setShareOpen] = useState(false);
   const [newFieldId, setNewFieldId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -214,7 +233,10 @@ export function FormBuilder(props: FormBuilderProps) {
       expiresAt: expiresAt || undefined,
       fields,
       theme: { fontFamily, fontWeight, banner },
+      titleStyle,
+      descriptionStyle,
       confirmationMessage: confirmationMessage || undefined,
+      confirmationMessageStyle,
     };
 
     if (props.mode === "edit") {
@@ -288,13 +310,6 @@ export function FormBuilder(props: FormBuilderProps) {
         </div>
       </div>
 
-      <DesignToolbar
-        fontFamily={fontFamily}
-        fontWeight={fontWeight}
-        onFontFamilyChange={setFontFamily}
-        onFontWeightChange={setFontWeight}
-      />
-
       <p className="text-muted-foreground text-center text-sm">
         Click any text below to edit it. Use the icons next to a question to
         change its type, reorder it, or delete it.
@@ -318,14 +333,20 @@ export function FormBuilder(props: FormBuilderProps) {
                   value={title}
                   onChange={setTitle}
                   placeholder="Untitled form"
-                  className="text-2xl"
-                  style={{ fontWeight: getFontWeightValue(fontWeight) }}
+                  className="text-2xl font-semibold"
+                  style={getTextStyle(titleStyle)}
+                  fontControls={fontControlsFor(titleStyle, setTitleStyle)}
                 />
                 <RichText
                   value={description}
                   onChange={setDescription}
                   placeholder="Form description"
                   className="text-muted-foreground"
+                  style={getTextStyle(descriptionStyle)}
+                  fontControls={fontControlsFor(
+                    descriptionStyle,
+                    setDescriptionStyle,
+                  )}
                   multiline
                 />
               </div>
@@ -428,6 +449,11 @@ export function FormBuilder(props: FormBuilderProps) {
                   onChange={setConfirmationMessage}
                   placeholder="Thanks for filling out this form. Your response has been saved."
                   className="border-input rounded-md border px-2 py-1.5"
+                  style={getTextStyle(confirmationMessageStyle)}
+                  fontControls={fontControlsFor(
+                    confirmationMessageStyle,
+                    setConfirmationMessageStyle,
+                  )}
                   multiline
                 />
               </Field>

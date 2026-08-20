@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { FieldType, FormField } from "@/lib/forms/types";
+import type { FieldType, FieldValidation, FormField } from "@/lib/forms/types";
 
 const FIELD_TYPE_OPTIONS: {
   value: FieldType;
@@ -41,12 +41,27 @@ const FIELD_TYPE_OPTIONS: {
 
 const CHOICE_TYPES: FieldType[] = ["single_choice", "multi_choice", "dropdown"];
 
+const VALIDATION_LABELS: Record<FieldValidation["kind"], string> = {
+  length: "Length",
+  number: "Number",
+  pattern: "Regular expression",
+};
+
+function createDefaultValidation(
+  kind: FieldValidation["kind"],
+): FieldValidation {
+  if (kind === "pattern") return { kind: "pattern", pattern: "" };
+  return { kind };
+}
+
 function changeFieldType(field: FormField, type: FieldType): FormField {
   const base = {
     id: field.id,
     label: field.label,
     description: field.description,
     required: field.required,
+    labelStyle: field.labelStyle,
+    descriptionStyle: field.descriptionStyle,
   };
 
   if (CHOICE_TYPES.includes(type)) {
@@ -164,6 +179,134 @@ export function FieldSettingsPopover({
             <Plus data-icon="inline-start" />
             Add option
           </Button>
+        </div>
+      ) : null}
+
+      {field.type === "short_text" || field.type === "long_text" ? (
+        <div className="flex flex-col gap-1.5">
+          <Label>Response validation</Label>
+          <Select
+            value={field.validation?.kind ?? "none"}
+            onValueChange={(value) =>
+              onChange({
+                ...field,
+                validation:
+                  value === "none"
+                    ? undefined
+                    : createDefaultValidation(value as FieldValidation["kind"]),
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="length">
+                  {VALIDATION_LABELS.length}
+                </SelectItem>
+                {field.type === "short_text" ? (
+                  <>
+                    <SelectItem value="number">
+                      {VALIDATION_LABELS.number}
+                    </SelectItem>
+                    <SelectItem value="pattern">
+                      {VALIDATION_LABELS.pattern}
+                    </SelectItem>
+                  </>
+                ) : null}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          {field.validation ? (
+            <div className="flex flex-col gap-2 pt-1">
+              {field.validation.kind === "length" ||
+              field.validation.kind === "number" ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder={
+                      field.validation.kind === "length" ? "Min length" : "Min"
+                    }
+                    value={field.validation.min ?? ""}
+                    onChange={(event) => {
+                      if (
+                        field.validation?.kind !== "length" &&
+                        field.validation?.kind !== "number"
+                      )
+                        return;
+                      onChange({
+                        ...field,
+                        validation: {
+                          ...field.validation,
+                          min: event.target.value
+                            ? Number(event.target.value)
+                            : undefined,
+                        },
+                      });
+                    }}
+                  />
+                  <Input
+                    type="number"
+                    placeholder={
+                      field.validation.kind === "length" ? "Max length" : "Max"
+                    }
+                    value={field.validation.max ?? ""}
+                    onChange={(event) => {
+                      if (
+                        field.validation?.kind !== "length" &&
+                        field.validation?.kind !== "number"
+                      )
+                        return;
+                      onChange({
+                        ...field,
+                        validation: {
+                          ...field.validation,
+                          max: event.target.value
+                            ? Number(event.target.value)
+                            : undefined,
+                        },
+                      });
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              {field.validation.kind === "pattern" ? (
+                <Input
+                  placeholder="Regular expression"
+                  value={field.validation.pattern}
+                  onChange={(event) => {
+                    if (field.validation?.kind !== "pattern") return;
+                    onChange({
+                      ...field,
+                      validation: {
+                        ...field.validation,
+                        pattern: event.target.value,
+                      },
+                    });
+                  }}
+                />
+              ) : null}
+
+              <Input
+                placeholder="Custom error message (optional)"
+                value={field.validation.message ?? ""}
+                onChange={(event) => {
+                  if (!field.validation) return;
+                  onChange({
+                    ...field,
+                    validation: {
+                      ...field.validation,
+                      message: event.target.value,
+                    },
+                  });
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

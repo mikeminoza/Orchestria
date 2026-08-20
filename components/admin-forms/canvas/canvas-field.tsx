@@ -39,9 +39,25 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { RichText } from "@/components/admin-forms/canvas/rich-text-editable";
+import {
+  RichText,
+  type FontControls,
+} from "@/components/admin-forms/canvas/rich-text-editable";
 import { FieldSettingsPopover } from "@/components/admin-forms/canvas/field-settings-popover";
-import type { FormField } from "@/lib/forms/types";
+import { DEFAULT_TEXT_STYLE, getTextStyle } from "@/lib/forms/theme";
+import type { FormField, TextStyle } from "@/lib/forms/types";
+
+function fontControlsFor(
+  style: TextStyle | undefined,
+  fallback: TextStyle,
+  onChange: (style: TextStyle) => void,
+): FontControls {
+  const resolved = style ?? fallback;
+  return {
+    fontFamily: resolved.fontFamily,
+    onFontFamilyChange: (fontFamily) => onChange({ ...resolved, fontFamily }),
+  };
+}
 
 function RequiredMark({ required }: { required?: boolean }) {
   if (!required) return null;
@@ -236,6 +252,12 @@ export function CanvasField({
             onChange={(html) => onChange({ ...field, label: html })}
             placeholder="Question"
             className="text-sm font-medium"
+            style={getTextStyle(field.labelStyle)}
+            fontControls={fontControlsFor(
+              field.labelStyle,
+              DEFAULT_TEXT_STYLE,
+              (labelStyle) => onChange({ ...field, labelStyle }),
+            )}
             autoFocus={autoFocus}
           />
           <RequiredMark required={field.required} />
@@ -250,6 +272,12 @@ export function CanvasField({
             }}
             placeholder="Description"
             className="text-muted-foreground text-sm"
+            style={getTextStyle(field.descriptionStyle)}
+            fontControls={fontControlsFor(
+              field.descriptionStyle,
+              DEFAULT_TEXT_STYLE,
+              (descriptionStyle) => onChange({ ...field, descriptionStyle }),
+            )}
             multiline
           />
         ) : (

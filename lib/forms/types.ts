@@ -3,17 +3,29 @@ export type FieldOption = {
   value: string;
 };
 
+export type TextStyle = {
+  fontFamily: FormFontFamily;
+};
+
 type BaseField = {
   id: string;
   label: string;
   description?: string;
   required?: boolean;
+  labelStyle?: TextStyle;
+  descriptionStyle?: TextStyle;
 };
+
+export type FieldValidation =
+  | { kind: "length"; min?: number; max?: number; message?: string }
+  | { kind: "number"; min?: number; max?: number; message?: string }
+  | { kind: "pattern"; pattern: string; message?: string };
 
 export type FormField =
   | (BaseField & {
       type: "short_text" | "long_text" | "email" | "file_upload";
       placeholder?: string;
+      validation?: FieldValidation;
     })
   | (BaseField & {
       type: "single_choice" | "multi_choice" | "dropdown";
@@ -51,7 +63,10 @@ export type FormRecord = {
   updatedAt: string;
   fields: FormField[];
   theme: FormTheme;
+  titleStyle?: TextStyle;
+  descriptionStyle?: TextStyle;
   confirmationMessage?: string;
+  confirmationMessageStyle?: TextStyle;
 };
 
 export type FormAnswer = string | string[];

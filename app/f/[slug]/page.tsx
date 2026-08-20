@@ -11,7 +11,9 @@ import {
 import { FormBannerDisplay } from "@/components/public-form/form-banner";
 import { getFormBySlug } from "@/components/public-form/form-schema";
 import { PublicForm } from "@/components/public-form/public-form";
-import { getFontStack, getFontWeightValue } from "@/lib/forms/theme";
+import { RICH_TEXT_LINK_CLASS } from "@/lib/forms/rich-text";
+import { getFontStack, getTextStyle } from "@/lib/forms/theme";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Customer Feedback Survey",
@@ -38,13 +40,13 @@ export default async function PublicFormPage({
           <Card className="rounded-t-none">
             <CardHeader>
               <CardTitle
-                className="text-2xl"
-                style={{
-                  fontWeight: getFontWeightValue(form.theme.fontWeight),
-                }}
+                className={cn("text-2xl font-semibold", RICH_TEXT_LINK_CLASS)}
+                style={getTextStyle(form.titleStyle)}
                 dangerouslySetInnerHTML={{ __html: form.title }}
               />
               <CardDescription
+                className={RICH_TEXT_LINK_CLASS}
+                style={getTextStyle(form.descriptionStyle)}
                 dangerouslySetInnerHTML={{ __html: form.description }}
               />
             </CardHeader>

@@ -2,16 +2,47 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bold, Italic, Link2, RemoveFormatting, Underline } from "lucide-react";
+import {
+  Bold,
+  Check,
+  Italic,
+  Link2,
+  Link2Off,
+  RemoveFormatting,
+  Underline,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { RICH_TEXT_LINK_CLASS } from "@/lib/forms/rich-text";
+import { FONT_FAMILY_OPTIONS } from "@/lib/forms/theme";
+import type { FormFontFamily } from "@/lib/forms/types";
 import { cn } from "@/lib/utils";
+
+export type FontControls = {
+  fontFamily: FormFontFamily;
+  onFontFamilyChange: (value: FormFontFamily) => void;
+};
 
 const sharedClassName = cn(
   "-mx-2 w-full rounded-md border border-transparent bg-transparent px-2 py-1",
@@ -19,10 +50,16 @@ const sharedClassName = cn(
   "hover:border-border hover:bg-muted/40",
   "focus:border-input focus:bg-background focus:ring-ring/50 focus:ring-2",
   "empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50",
+  RICH_TEXT_LINK_CLASS,
 );
 
 type ActiveFormats = Record<"bold" | "italic" | "underline", boolean>;
-type ToolbarState = { top: number; left: number; active: ActiveFormats } | null;
+type ToolbarState = {
+  top: number;
+  left: number;
+  active: ActiveFormats;
+  linkUrl: string | null;
+} | null;
 
 function readActiveFormats(): ActiveFormats {
   return {
@@ -31,6 +68,24 @@ function readActiveFormats(): ActiveFormats {
     underline: document.queryCommandState("underline"),
   };
 }
+
+function getLinkElement(container: HTMLElement): HTMLAnchorElement | null {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  const node = selection.anchorNode;
+  const element = node instanceof Element ? node : node?.parentElement;
+  const anchor = element?.closest("a") ?? null;
+  return anchor && container.contains(anchor) ? anchor : null;
+}
+
+type LinkEditor = {
+  open: boolean;
+  value: string;
+  onOpenChange: (open: boolean) => void;
+  onValueChange: (value: string) => void;
+  onApply: () => void;
+  onRemove: () => void;
+};
 
 function ToolbarButton({
   label,
@@ -56,18 +111,62 @@ function ToolbarButton({
 function FormattingToolbar({
   state,
   onCommand,
+  fontControls,
+  onSelectOpenChange,
+  linkEditor,
+  toolbarRef,
 }: {
   state: NonNullable<ToolbarState>;
   onCommand: (command: string, value?: string) => void;
+  fontControls?: FontControls;
+  onSelectOpenChange: (open: boolean) => void;
+  linkEditor: LinkEditor;
+  toolbarRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
     <div
+      ref={toolbarRef}
+      data-rich-text-toolbar
       className="bg-popover text-popover-foreground fixed z-50 flex w-fit -translate-y-full items-center gap-0.5 rounded-md border p-1 shadow-md"
       style={{ top: state.top, left: state.left }}
       // Buttons must not steal focus/selection from the editable field before
       // their onClick runs, or execCommand would have nothing to act on.
       onMouseDown={(event) => event.preventDefault()}
     >
+      {fontControls ? (
+        <>
+          <Select
+            value={fontControls.fontFamily}
+            onValueChange={(value) =>
+              fontControls.onFontFamilyChange(value as FormFontFamily)
+            }
+            onOpenChange={onSelectOpenChange}
+          >
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <SelectTrigger
+                  size="sm"
+                  className="w-28"
+                  aria-label="Font family"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Font family for this text</TooltipContent>
+            </Tooltip>
+            <SelectContent>
+              <SelectGroup>
+                {FONT_FAMILY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          <Separator orientation="vertical" className="mx-0.5 h-5" />
+        </>
+      ) : null}
       <ToolbarButton
         label="Bold"
         active={state.active.bold}
@@ -90,15 +189,75 @@ function FormattingToolbar({
         <Underline />
       </ToolbarButton>
       <Separator orientation="vertical" className="mx-0.5 h-5" />
-      <ToolbarButton
-        label="Link"
-        onClick={() => {
-          const url = window.prompt("Link URL");
-          if (url) onCommand("createLink", url);
-        }}
-      >
-        <Link2 />
-      </ToolbarButton>
+      <Popover open={linkEditor.open} onOpenChange={linkEditor.onOpenChange}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant={state.linkUrl ? "secondary" : "ghost"}
+                size="icon-sm"
+                aria-label={state.linkUrl ? "Edit link" : "Add link"}
+              >
+                <Link2 />
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            {state.linkUrl ? "Edit link" : "Add link"}
+          </TooltipContent>
+        </Tooltip>
+        <PopoverContent align="start" className="w-72">
+          <form
+            className="flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              linkEditor.onApply();
+            }}
+          >
+            <Label htmlFor="rich-text-link-url" className="text-xs">
+              Link URL
+            </Label>
+            <div className="flex items-center gap-1.5">
+              <Input
+                id="rich-text-link-url"
+                autoFocus
+                type="url"
+                placeholder="https://example.com"
+                value={linkEditor.value}
+                onChange={(event) =>
+                  linkEditor.onValueChange(event.target.value)
+                }
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="submit"
+                    size="icon-sm"
+                    aria-label="Apply link"
+                    disabled={!linkEditor.value.trim()}
+                  >
+                    <Check />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Apply link</TooltipContent>
+              </Tooltip>
+            </div>
+            {state.linkUrl ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive justify-start"
+                onClick={linkEditor.onRemove}
+              >
+                <Link2Off data-icon="inline-start" />
+                Remove link
+              </Button>
+            ) : null}
+          </form>
+        </PopoverContent>
+      </Popover>
       <ToolbarButton
         label="Clear formatting"
         onClick={() => onCommand("removeFormat")}
@@ -119,6 +278,7 @@ export function RichText({
   style,
   multiline = false,
   autoFocus,
+  fontControls,
 }: {
   id?: string;
   value: string;
@@ -129,11 +289,106 @@ export function RichText({
   style?: React.CSSProperties;
   multiline?: boolean;
   autoFocus?: boolean;
+  fontControls?: FontControls;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string | null>(null);
   const isFocused = useRef(false);
+  const suppressBlur = useRef(false);
+  const savedRangeRef = useRef<Range | null>(null);
   const [toolbar, setToolbar] = useState<ToolbarState>(null);
+  const [linkEditorOpen, setLinkEditorOpen] = useState(false);
+  const [linkInputValue, setLinkInputValue] = useState("");
+
+  function handlePopoverOpenChange(open: boolean) {
+    suppressBlur.current = open;
+  }
+
+  function handleLinkPopoverOpenChange(open: boolean) {
+    handlePopoverOpenChange(open);
+    setLinkEditorOpen(open);
+    if (!open) savedRangeRef.current = null;
+  }
+
+  function openLinkEditor() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !ref.current) return;
+
+    let range = selection.getRangeAt(0).cloneRange();
+    const linkElement = getLinkElement(ref.current);
+    // A collapsed caret inside an existing link should still let the whole
+    // link be edited/removed, not just insert a new link at the caret.
+    if (linkElement && range.collapsed) {
+      range = document.createRange();
+      range.selectNodeContents(linkElement);
+    }
+
+    savedRangeRef.current = range;
+    setLinkInputValue(linkElement?.getAttribute("href") ?? "");
+    handleLinkPopoverOpenChange(true);
+  }
+
+  function restoreSavedRange() {
+    const range = savedRangeRef.current;
+    if (!range) return;
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  }
+
+  function applyLink() {
+    const url = linkInputValue.trim();
+    if (!url) return;
+    restoreSavedRange();
+    ref.current?.focus();
+    document.execCommand("createLink", false, url);
+    emitChange();
+    setToolbar((prev) =>
+      prev ? { ...prev, linkUrl: url, active: readActiveFormats() } : prev,
+    );
+    handleLinkPopoverOpenChange(false);
+  }
+
+  function removeLink() {
+    restoreSavedRange();
+    ref.current?.focus();
+    document.execCommand("unlink");
+    emitChange();
+    setToolbar((prev) =>
+      prev ? { ...prev, linkUrl: null, active: readActiveFormats() } : prev,
+    );
+    handleLinkPopoverOpenChange(false);
+  }
+
+  useEffect(() => {
+    if (!toolbar) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (ref.current?.contains(target)) return;
+      if (toolbarRef.current?.contains(target)) return;
+      // The font family Select's dropdown and the link editor Popover are
+      // both portaled to <body>, outside the field and the toolbar, so they
+      // need their own checks.
+      const element = target instanceof Element ? target : target.parentElement;
+      if (
+        element?.closest(
+          '[data-slot="select-content"], [data-slot="popover-content"]',
+        )
+      ) {
+        return;
+      }
+
+      isFocused.current = false;
+      setToolbar(null);
+      onBlur?.();
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [toolbar, onBlur]);
 
   useEffect(() => {
     if (ref.current && value !== lastEmitted.current) {
@@ -172,6 +427,7 @@ export function RichText({
       top: anchorRect.top - 6,
       left: anchorRect.left,
       active: readActiveFormats(),
+      linkUrl: getLinkElement(ref.current)?.getAttribute("href") ?? null,
     });
   }, []);
 
@@ -192,7 +448,15 @@ export function RichText({
     document.execCommand(command, false, value);
     emitChange();
     setToolbar((prev) =>
-      prev ? { ...prev, active: readActiveFormats() } : prev,
+      prev
+        ? {
+            ...prev,
+            active: readActiveFormats(),
+            linkUrl: ref.current
+              ? (getLinkElement(ref.current)?.getAttribute("href") ?? null)
+              : prev.linkUrl,
+          }
+        : prev,
     );
   }
 
@@ -227,7 +491,17 @@ export function RichText({
             event.preventDefault();
           }
         }}
-        onBlur={() => {
+        onBlur={(event) => {
+          const relatedTarget = event.relatedTarget as Element | null;
+          // Radix's Select trigger focuses itself imperatively when opened
+          // and again when it closes, which would otherwise blur this field
+          // and tear the whole toolbar (including the open dropdown) down.
+          if (
+            suppressBlur.current ||
+            relatedTarget?.closest("[data-rich-text-toolbar]")
+          ) {
+            return;
+          }
           isFocused.current = false;
           setToolbar(null);
           onBlur?.();
@@ -235,7 +509,24 @@ export function RichText({
       />
       {toolbar
         ? createPortal(
-            <FormattingToolbar state={toolbar} onCommand={handleCommand} />,
+            <FormattingToolbar
+              state={toolbar}
+              onCommand={handleCommand}
+              fontControls={fontControls}
+              onSelectOpenChange={handlePopoverOpenChange}
+              linkEditor={{
+                open: linkEditorOpen,
+                value: linkInputValue,
+                onOpenChange: (open) => {
+                  if (open) openLinkEditor();
+                  else handleLinkPopoverOpenChange(false);
+                },
+                onValueChange: setLinkInputValue,
+                onApply: applyLink,
+                onRemove: removeLink,
+              }}
+              toolbarRef={toolbarRef}
+            />,
             document.body,
           )
         : null}
